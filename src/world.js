@@ -40,29 +40,30 @@ export function createSky() {
 }
 
 export function createOcean() {
-  const size = 900, seg = 80;
+  const size = 900, seg = 48;
   const geo = new THREE.PlaneGeometry(size, size, seg, seg);
   geo.rotateX(-Math.PI / 2);
+  // Opaque (not transparent): a full-screen transparent plane is a big fill-rate
+  // cost — no early-Z, forced blending, and it can't occlude geometry behind it.
   const mat = new THREE.MeshStandardMaterial({
-    color: 0x1f6f8f, roughness: 0.55, metalness: 0.1,
-    transparent: true, opacity: 0.96, flatShading: true,
+    color: 0x1f6f8f, roughness: 0.55, metalness: 0.1, flatShading: true,
   });
   const mesh = new THREE.Mesh(geo, mat);
   mesh.receiveShadow = false;
   const pos = geo.attributes.position;
-  const count = pos.count;
-  let frame = 0;
-  const wave = (x, z, t) =>
-    Math.sin(x * 0.06 + t * 0.9) * 0.55 +
-    Math.sin(z * 0.08 + t * 1.1) * 0.4 +
-    Math.sin((x + z) * 0.03 - t * 0.6) * 0.5;
+  const arr = pos.array; // [x,y,z, x,y,z, …] — write directly, no per-vertex method calls
 
+  // flatShading derives normals from screen-space derivatives, so we never need
+  // to recompute vertex normals as the waves move (that was the main CPU cost).
   mesh.userData.tick = (t) => {
-    for (let i = 0; i < count; i++) {
-      pos.setY(i, wave(pos.getX(i), pos.getZ(i), t));
+    for (let i = 0; i < arr.length; i += 3) {
+      const x = arr[i], z = arr[i + 2];
+      arr[i + 1] =
+        Math.sin(x * 0.06 + t * 0.9) * 0.55 +
+        Math.sin(z * 0.08 + t * 1.1) * 0.4 +
+        Math.sin((x + z) * 0.03 - t * 0.6) * 0.5;
     }
     pos.needsUpdate = true;
-    if ((frame++ % 3) === 0) geo.computeVertexNormals(); // cheaper than every frame
   };
   return mesh;
 }
@@ -209,19 +210,26 @@ export function marker(color = 0x66e0ff, icon = 'wrench') {
 // A floating clue fragment (spins + bobs)
 export function clueFragment(color = 0xffd76a) {
   const g = new THREE.Group();
+  // Emissive shard + a soft additive halo — reads as "glowing" with NO dynamic
+  // light (point lights are the expensive part; several of them killed the FPS).
   const shard = new THREE.Mesh(
     new THREE.OctahedronGeometry(0.35, 0),
-    new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.8, roughness: 0.3, metalness: 0.3 })
+    new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 1.2, roughness: 0.3, metalness: 0.3 })
   );
   shard.position.y = 1.1;
   g.add(shard);
-  const glow = new THREE.PointLight(color, 6, 6, 2);
-  glow.position.y = 1.1;
-  g.add(glow);
+  const halo = new THREE.Mesh(
+    new THREE.SphereGeometry(0.62, 12, 10),
+    new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.16, depthWrite: false, blending: THREE.AdditiveBlending })
+  );
+  halo.position.y = 1.1;
+  g.add(halo);
   g.userData.tick = (t) => {
     shard.rotation.y = t * 1.6;
     shard.rotation.x = t * 0.9;
     shard.position.y = 1.1 + Math.sin(t * 2.2) * 0.18;
+    halo.position.y = shard.position.y;
+    halo.scale.setScalar(1 + Math.sin(t * 3) * 0.08);
   };
   return g;
 }
@@ -290,10 +298,8 @@ export function treasureChest() {
   const coins = new THREE.Mesh(new THREE.SphereGeometry(0.55, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), M.gold);
   coins.position.y = 0.78;
   g.add(coins);
-  const light = new THREE.PointLight(0xffd76a, 0, 8, 2);
-  light.position.y = 1.2;
-  g.add(light);
-  g.userData.light = light;
+  // No persistent light here — a point light is counted by every material's
+  // shader even at intensity 0. One is added on dig (see Game._digTreasure).
   return g;
 }
 

@@ -429,7 +429,10 @@ export class Game {
       g.position.set(d.local.x, islandHeight(Math.hypot(d.local.x, d.local.z)), d.local.z);
       this.island.add(g);
       this.spinners.push(g);
-      return { group: g, local: d.local, playerOnly: d.playerOnly, collected: false, targetedBy: null };
+      // precompute the world position once (island is fixed after landing) so the
+      // per-frame collect/gather checks don't allocate a Vector3 every frame
+      const world = new THREE.Vector3().copy(d.local).add(ISLAND_ORIGIN);
+      return { group: g, local: d.local, world, playerOnly: d.playerOnly, collected: false, targetedBy: null };
     });
 
     // campfire interaction: player crew deposits carried clue automatically (proximity);
@@ -465,7 +468,9 @@ export class Game {
   _digTreasure() {
     this.treasureDug = true;
     this.chest.visible = true;
-    this.chest.userData.light.intensity = 3;
+    const glow = new THREE.PointLight(0xffd76a, 4, 12, 2); // added only now (round is over)
+    glow.position.y = 1.2;
+    this.chest.add(glow);
     this._chestRise = 0;
     this.audio.win();
     this.ui.setPrompt(null); this.ui.setHold(0);
@@ -602,34 +607,30 @@ export class Game {
   }
 
   _islandLogic() {
-    // collect fragments the player walks over (one at a time)
+    const p = this.player.object.position;
     if (!this.carrying) {
-      const p = this.player.object.position;
+      // collect fragments the player walks over (one at a time)
       for (const fr of this.fragments) {
         if (fr.collected) continue;
-        const wp = new THREE.Vector3().copy(fr.local).add(ISLAND_ORIGIN);
-        if (Math.hypot(p.x - wp.x, p.z - wp.z) < 1.8) {
+        if (Math.hypot(p.x - fr.world.x, p.z - fr.world.z) < 1.8) {
           fr.collected = true; fr.group.visible = false;
           this.spinners = this.spinners.filter((s) => s !== fr.group);
           this.carrying = true;
           this.audio.progress();
           this.ui.toast('Clue in hand — bring it to the campfire.', 2400);
+          this._refreshObjective();
           break;
         }
       }
-    } else {
+    } else if (Math.hypot(p.x - this.fireWorld.x, p.z - this.fireWorld.z) < 3.0) {
       // deposit at fire
-      const p = this.player.object.position;
-      if (Math.hypot(p.x - this.fireWorld.x, p.z - this.fireWorld.z) < 3.0) {
-        this.carrying = false;
-        this.cluesAtFire++;
-        this.audio.success();
-        this.ui.toast(`Clue added to the map (${this.cluesAtFire}/${CFG.cluesNeeded}).`, 2000);
-        this._refreshObjective();
-        this._maybeRevealMap();
-      }
+      this.carrying = false;
+      this.cluesAtFire++;
+      this.audio.success();
+      this.ui.toast(`Clue added to the map (${this.cluesAtFire}/${CFG.cluesNeeded}).`, 2000);
+      this._refreshObjective();
+      this._maybeRevealMap();
     }
-    this._refreshObjective();
   }
 
   _maybeRevealMap() {
@@ -732,9 +733,8 @@ export class Game {
       }
       return;
     }
-    const wp = new THREE.Vector3().copy(fr.local).add(ISLAND_ORIGIN);
-    c.target.copy(wp);
-    if (c.group.position.distanceTo(wp) < 1.6) {
+    c.target.copy(fr.world);
+    if (c.group.position.distanceTo(fr.world) < 1.6) {
       fr.collected = true; fr.group.visible = false;
       this.spinners = this.spinners.filter((s) => s !== fr.group);
       c.frag = fr; c._claim = null; c.state = 'toFire';

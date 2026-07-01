@@ -21,8 +21,11 @@ export class UI {
 
   setMutiny(pct) {
     pct = Math.max(0, Math.min(100, pct));
+    const r = Math.round(pct);
+    if (r === this._lastMutiny) return; // skip redundant per-frame DOM writes
+    this._lastMutiny = r;
     this.el('mutiny-fill').style.width = pct + '%';
-    this.el('mutiny-val').textContent = Math.round(pct) + '%';
+    this.el('mutiny-val').textContent = r + '%';
     this.el('mutiny-bar').classList.toggle('danger', pct >= 70);
   }
 
@@ -31,25 +34,36 @@ export class UI {
     if (!visible) { wrap.classList.add('hidden'); return; }
     wrap.classList.remove('hidden');
     pct = Math.max(0, Math.min(100, pct));
+    const r = Math.round(pct);
+    if (r === this._lastSus) return;
+    this._lastSus = r;
     this.el('suspicion-fill').style.width = pct + '%';
   }
 
   setFish(n, total, visible) {
     const w = this.el('fish-wrap');
-    if (!visible) { w.classList.add('hidden'); return; }
-    w.classList.remove('hidden');
+    if (!visible) { if (this._fishVis !== false) { w.classList.add('hidden'); this._fishVis = false; } return; }
+    if (this._fishVis !== true) { w.classList.remove('hidden'); this._fishVis = true; }
+    const key = n + '/' + total;
+    if (key === this._lastFish) return;
+    this._lastFish = key;
     this.el('fish-val').textContent = `${n} / ${total}`;
   }
 
   setTimer(seconds, visible) {
     const w = this.el('timer-wrap');
-    if (!visible) { w.classList.add('hidden'); return; }
-    w.classList.remove('hidden');
-    this.el('timer-val').textContent = Math.ceil(Math.max(0, seconds)).toString();
+    if (!visible) { if (this._timerVis !== false) { w.classList.add('hidden'); this._timerVis = false; } return; }
+    if (this._timerVis !== true) { w.classList.remove('hidden'); this._timerVis = true; }
+    const s = Math.ceil(Math.max(0, seconds));
+    if (s === this._lastTimer) return;
+    this._lastTimer = s;
+    this.el('timer-val').textContent = s.toString();
   }
 
   // ---- interaction prompt + hold ring ----
   setPrompt(text) {
+    if (text === this._lastPrompt) return; // avoid rewriting innerHTML every frame
+    this._lastPrompt = text;
     const p = this.el('prompt');
     if (!text) { p.classList.add('hidden'); return; }
     p.classList.remove('hidden');
@@ -57,11 +71,12 @@ export class UI {
   }
 
   setHold(frac) {
+    const deg = frac <= 0 ? -1 : Math.min(360, Math.round(frac * 360));
+    if (deg === this._lastHoldDeg) return;
+    this._lastHoldDeg = deg;
     const ring = this.el('hold-ring');
-    if (frac <= 0) { ring.classList.add('hidden'); return; }
+    if (deg < 0) { ring.classList.add('hidden'); return; }
     ring.classList.remove('hidden');
-    // conic-gradient progress
-    const deg = Math.min(360, frac * 360);
     ring.style.background =
       `conic-gradient(#ffd76a ${deg}deg, rgba(255,255,255,0.12) ${deg}deg)`;
   }
