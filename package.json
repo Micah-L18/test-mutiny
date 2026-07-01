@@ -1,0 +1,13 @@
+{
+  "name": "mutiny-seas",
+  "version": "0.1.0",
+  "description": "Mutiny Seas — a first-person 3D social-deduction pirate demo (Among Us at sea) built with Three.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js 8080"
+  },
+  "keywords": ["threejs", "game", "webgl", "pirate", "social-deduction", "demo"],
+  "license": "MIT",
+  "engines": { "node": ">=18" }
+}

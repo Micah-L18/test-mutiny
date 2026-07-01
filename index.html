@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Mutiny Seas — 3D Pirate Demo</title>
+  <link rel="stylesheet" href="./styles.css" />
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "./vendor/three/three.module.js",
+      "three/addons/": "./vendor/three/addons/"
+    }
+  }
+  </script>
+</head>
+<body>
+  <canvas id="scene"></canvas>
+
+  <!-- ===================== HUD ===================== -->
+  <div id="hud">
+    <div id="crosshair" class="hidden">+</div>
+
+    <div id="topbar">
+      <div id="phase-tag" class="pill"></div>
+      <div id="mutiny-bar" class="meter">
+        <span class="meter-label">MUTINY</span>
+        <div class="meter-track"><div id="mutiny-fill" class="meter-fill"></div></div>
+        <span id="mutiny-val" class="meter-val">0%</span>
+      </div>
+      <div id="suspicion-wrap" class="meter suspicion hidden">
+        <span class="meter-label">SUSPICION</span>
+        <div class="meter-track"><div id="suspicion-fill" class="meter-fill"></div></div>
+      </div>
+    </div>
+
+    <div id="objective">
+      <div id="obj-title"></div>
+      <div id="obj-detail"></div>
+    </div>
+
+    <div id="side-stats">
+      <div id="fish-wrap" class="stat hidden">🐟 <span id="fish-val">0 / 0</span></div>
+      <div id="timer-wrap" class="stat hidden">⏳ <span id="timer-val">0</span>s</div>
+    </div>
+
+    <div id="prompt" class="hidden">
+      <div id="hold-ring" class="hidden"></div>
+      <div id="prompt-text"></div>
+    </div>
+
+    <div id="toast" class="hidden"></div>
+
+    <div id="controls-hint">
+      <b>WASD</b> move · <b>Mouse</b> look · <b>Shift</b> sprint · <b>E</b> interact · <b>Esc</b> pause
+    </div>
+  </div>
+
+  <!-- ===================== MENU ===================== -->
+  <div id="menu" class="overlay">
+    <div class="menu-card">
+      <div class="brand">☠︎</div>
+      <h1>MUTINY&nbsp;SEAS</h1>
+      <p class="tagline">A first-person social-deduction pirate voyage.<br />Find the treasure before the mutiny gets out of hand.</p>
+      <div class="how">
+        <div><span>1</span> Repair the ship</div>
+        <div><span>2</span> Fish across the sea</div>
+        <div><span>3</span> Gather the clues</div>
+        <div><span>4</span> Dig up the gold</div>
+      </div>
+      <button id="play-btn" class="btn primary">Set Sail</button>
+      <p class="fineprint">Your role — <b>crewmate</b> or hidden <b>mutineer</b> — is rolled at the start of every voyage.</p>
+      <div id="webgl-warn" class="hidden warn">Your browser/device may not support WebGL. Try a desktop Chrome/Edge/Firefox.</div>
+    </div>
+  </div>
+
+  <!-- ===================== BRIEFING ===================== -->
+  <div id="briefing" class="overlay hidden">
+    <div id="role-card" class="menu-card role">
+      <div class="role-badge">YOUR SECRET ROLE</div>
+      <h1 id="role-name">CREWMATE</h1>
+      <p id="role-sub" class="tagline"></p>
+      <div class="objective-box">
+        <div class="ob-label">OBJECTIVE</div>
+        <p id="role-objective"></p>
+      </div>
+      <p id="role-tip" class="fineprint"></p>
+      <button id="begin-btn" class="btn primary">Begin — Lock Pointer</button>
+      <p class="fineprint dim">Click grabs your mouse for look controls. Press <b>Esc</b> to release.</p>
+    </div>
+  </div>
+
+  <!-- ===================== MAP REVEAL ===================== -->
+  <div id="map-overlay" class="overlay hidden">
+    <div class="menu-card map-card">
+      <div class="role-badge">THE CLUES COMBINE</div>
+      <div class="map-visual">🗺️</div>
+      <p id="map-hint" class="map-hint"></p>
+      <p id="map-warn" class="map-warn"></p>
+      <button id="map-btn" class="btn primary">Follow the Map</button>
+    </div>
+  </div>
+
+  <!-- ===================== END ===================== -->
+  <div id="end" class="overlay hidden">
+    <div class="menu-card">
+      <h1 id="end-title" class="win">TREASURE CLAIMED</h1>
+      <p id="end-detail" class="tagline"></p>
+      <button id="replay-btn" class="btn primary">Sail Again</button>
+    </div>
+  </div>
+
+  <!-- ===================== PAUSE ===================== -->
+  <div id="pause" class="overlay hidden">
+    <div class="menu-card small">
+      <h1>PAUSED</h1>
+      <p class="tagline">Take a breath, sailor.</p>
+      <button id="resume-btn" class="btn primary">Resume</button>
+      <button id="replay-btn-2" class="btn ghost">Restart Voyage</button>
+    </div>
+  </div>
+
+  <!-- fade layer for transitions -->
+  <div id="fade"></div>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
